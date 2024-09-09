@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Observable, of } from 'rxjs';
-import { PeriodicElement } from '../models/periodic-element.model';
+import { PeriodicElement } from '../interfaces/PeriodicElement';
 
 const ELEMENT_DATA: PeriodicElement[] = [
   { position: 1, name: 'Hydrogen', weight: 1.0079, symbol: 'H' },
@@ -19,15 +19,17 @@ const ELEMENT_DATA: PeriodicElement[] = [
   providedIn: 'root',
 })
 export class PeriodicElementsService {
-  getElements(): Observable<PeriodicElement[]> {
+  public getElements(): Observable<PeriodicElement[]> {
     return of(ELEMENT_DATA);
   }
 
-  updateElement(updatedElement: PeriodicElement): Observable<PeriodicElement[]> {
+  public updateElement(updatedElement: PeriodicElement): Observable<PeriodicElement[]> {
     const index = ELEMENT_DATA.findIndex(e => e.position === updatedElement.position);
+
     if (index > -1) {
       ELEMENT_DATA[index] = { ...updatedElement };
     }
+
     return of(ELEMENT_DATA);
   }
 }

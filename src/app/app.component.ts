@@ -1,13 +1,11 @@
-import { Component } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { PeriodicTableComponent } from './components/periodic-table/periodic-table.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet],
-  templateUrl: './app.component.html',
-  styleUrl: './app.component.scss'
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: '<app-periodic-table></app-periodic-table>',
+  imports: [PeriodicTableComponent]
 })
-export class AppComponent {
-  title = 'periodic-table-app';
-}
+export class AppComponent {}
