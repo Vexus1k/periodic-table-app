@@ -11,11 +11,13 @@ import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { CommonModule } from '@angular/common';
 import { PeriodicElement } from "../../core/interfaces/PeriodicElement";
+import { RxState } from "@rx-angular/state";
 
 @Component({
   selector: 'app-edit-dialog',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
+  providers: [RxState],
   imports: [
     MatInputModule,
     FormsModule,
@@ -33,13 +35,15 @@ export class EditDialogComponent {
 
   constructor(
     private readonly _dialogRef: MatDialogRef<EditDialogComponent>,
-    @Inject(MAT_DIALOG_DATA) private readonly _data: { element: PeriodicElement }
+    @Inject(MAT_DIALOG_DATA) private readonly _data: { element: PeriodicElement },
+    public readonly state: RxState<{ element: PeriodicElement }>
   ) {
-    this.element = { ..._data.element };
+    this.state.set({ element: { ..._data.element } });
+    this.element = this.state.get('element');
   }
 
   public save(): void {
-    this._dialogRef.close(this.element);
+    this._dialogRef.close(this.state.get('element'));
   }
 
   public close(): void {

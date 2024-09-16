@@ -4,7 +4,7 @@
   </mat-form-field>
 </div>
 
-<table mat-table [dataSource]="(filteredData$ | async) || []" class="mat-elevation-z8">
+<table mat-table [dataSource]="state.select('filteredData') | push" class="mat-elevation-z8">
   <ng-container matColumnDef="position">
     <th mat-header-cell *matHeaderCellDef>Number</th>
     <td mat-cell *matCellDef="let element">{{element.position}}</td>

@@ -19,17 +19,17 @@ const ELEMENT_DATA: PeriodicElement[] = [
   providedIn: 'root',
 })
 export class PeriodicElementsService {
+  private _elements: PeriodicElement[] = [...ELEMENT_DATA];
+
   public getElements(): Observable<PeriodicElement[]> {
-    return of(ELEMENT_DATA);
+    return of([...this._elements]);
   }
 
   public updateElement(updatedElement: PeriodicElement): Observable<PeriodicElement[]> {
-    const index = ELEMENT_DATA.findIndex(e => e.position === updatedElement.position);
+    this._elements = this._elements.map(element =>
+      element.position === updatedElement.position ? { ...updatedElement } : element
+    );
 
-    if (index > -1) {
-      ELEMENT_DATA[index] = { ...updatedElement };
-    }
-
-    return of(ELEMENT_DATA);
+    return of([...this._elements]);
   }
 }

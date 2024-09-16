@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { EditDialogComponent } from '../edit-dialog/edit-dialog.component';
 import { MatTableModule } from '@angular/material/table';
@@ -9,16 +9,18 @@ import { CommonModule } from '@angular/common';
 import { PeriodicElementsService } from "../../core/services/periodic-elements-service";
 import { PeriodicElement } from "../../core/interfaces/PeriodicElement";
 import {
-  debounceTime,
+  debounceTime, distinctUntilChanged,
   map,
-  Observable,
 } from "rxjs";
 import { MatIconModule } from "@angular/material/icon";
+import { RxState } from "@rx-angular/state";
+import { RxPush } from "@rx-angular/template/push";
 
 @Component({
   selector: 'app-periodic-table',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
+  providers: [RxState],
   imports: [
     MatTableModule,
     MatInputModule,
@@ -27,62 +29,70 @@ import { MatIconModule } from "@angular/material/icon";
     CommonModule,
     EditDialogComponent,
     MatIconModule,
-    ReactiveFormsModule
+    ReactiveFormsModule,
+    RxPush
   ],
   templateUrl: './periodic-table.component.html',
   styleUrls: ['./periodic-table.component.scss']
 })
 export class PeriodicTableComponent implements OnInit {
   public filterControl = new FormControl();
-  public filteredData$: Observable<PeriodicElement[]> | null = null;
   public readonly displayedColumns: string[] = ['position', 'name', 'weight', 'symbol', 'actions'];
-
-  private data$ = this._periodicElementsService.getElements();
 
   constructor(
     private readonly _periodicElementsService: PeriodicElementsService,
     private readonly _dialog: MatDialog,
-    private readonly _cdr: ChangeDetectorRef
+    protected readonly state: RxState<{ data: PeriodicElement[], filteredData: PeriodicElement[] }>
   ) {}
 
   ngOnInit() {
-    this.filteredData$ = this.data$;
+    this.state.connect('data', this._periodicElementsService.getElements());
+    this.state.connect('filteredData', this.state.select('data'));
 
-    this.filterControl.valueChanges.pipe(
-      debounceTime(2000)
-    ).subscribe(searchTerm => {
-      this.filteredData$ = this.getFilteredData(searchTerm);
-
-      this._cdr.markForCheck();
+    this.state.hold(this.filterControl.valueChanges.pipe(
+      debounceTime(2000),
+      distinctUntilChanged(),
+      map(searchTerm => this.getFilteredData(searchTerm))
+    ), filteredData => {
+      this.state.set({ filteredData });
     });
   }
 
   public openEditDialog(element: PeriodicElement): void {
     const dialogRef = this._dialog.open(EditDialogComponent, {
-      data: { element },
+      data: { element }
     });
 
-    dialogRef.afterClosed().subscribe(result => {
+    this.state.hold(dialogRef.afterClosed(), result => {
       if (result) {
         this.updateElement(result);
       }
     });
   }
 
-  private getFilteredData(searchTerm: string): Observable<PeriodicElement[]> {
-    return this.data$.pipe(
-      map((data) => data.filter(item => Object.values(item).some(value =>
-        value.toString().toLowerCase().includes(searchTerm.toLowerCase())
-      )))
-    );
+  private getFilteredData(searchTerm: string): PeriodicElement[] {
+    const data = this.state.get('data');
+
+    if (!searchTerm) {
+      return data;
+    }
+
+    return data.filter(item => Object.values(item).some(value =>
+      value.toString().toLowerCase().includes(searchTerm.toLowerCase())
+    ));
   }
 
   private updateElement(updatedElement: PeriodicElement): void {
-    this._periodicElementsService.updateElement(updatedElement).subscribe(() => {
-      this.data$ = this._periodicElementsService.getElements();
-      this.filteredData$ = this.getFilteredData(this.filterControl?.value || '');
+    this.state.hold(this._periodicElementsService.updateElement(updatedElement), updatedData => {
+      this.state.set({ data: updatedData });
 
-      this._cdr.markForCheck();
+      const searchTerm = this.filterControl?.value || '';
+
+      if (searchTerm) {
+        this.state.set({ filteredData: this.getFilteredData(searchTerm) });
+      } else {
+        this.state.set({ filteredData: updatedData });
+      }
     });
   }
 }
